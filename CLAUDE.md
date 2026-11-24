@@ -40,6 +40,9 @@ Die Daten gehen per QR-Code oder JSON-Export an eine Flutter-Windows-App.
 
 ## QR-Format (nur Ziffern → QR-Numeric-Modus, Fehlerkorrektur M)
 
+Vollständige Beschreibung mit Prüfregeln und Testvektoren für den Importer: `QR-FORMAT.md`.
+Bei Änderungen am Format dort und in `encode()` (`index.html`) gleichzeitig anpassen.
+
 ```
 1 TTTT WWW WWW WWW …
 │ │    └ je n10-Wert 3 Ziffern, 999 = kein Wert (null), max. 998
