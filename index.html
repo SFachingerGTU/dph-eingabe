@@ -27,7 +27,7 @@ LAYOUT: eine Spalte am Handy, ab 900px Eingabe links und QR rechts
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);overflow-x:clip}
-.wrap{max-width:640px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) max(4vw,14px) 90px}
+.wrap{max-width:640px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) max(4vw,14px) calc(32px + env(safe-area-inset-bottom))}
 h1{font-size:32px;line-height:1.05;margin:4px 0 4px;font-weight:700;text-wrap:balance}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 16px}
 .top h1{margin:0}.topbtns{display:flex;gap:8px;align-items:center;flex:none}
@@ -57,6 +57,8 @@ label.check{display:flex;align-items:center;gap:12px;min-height:44px;margin:0;fo
 .check input{flex:none;width:24px;height:24px;min-height:0;padding:0;margin:0;accent-color:var(--ink)}
 .rows{margin-top:16px;border-top:2px solid var(--ink)}
 .row{display:grid;grid-template-columns:112px minmax(0,1fr) 44px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+/* Nach jedem vollen Meter (Zeile endet auf x,00 m) eine kräftige Trennlinie */
+.row.meter{border-bottom:2px solid var(--ink)}
 .depth{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;font-weight:500}
 .depth small{color:var(--muted);font-weight:400}
 .row input{text-align:right;font-variant-numeric:tabular-nums}
@@ -70,14 +72,11 @@ button.b{font:inherit;font-weight:500;min-height:46px;padding:0 16px;border-radi
 button.b.primary{background:var(--accent);color:#111;border-color:#111;font-weight:700}
 button.b.ghost{border-color:var(--line);color:var(--muted)}
 .note{font-size:13px;color:var(--muted);margin-top:10px}
-button.b.addrow{display:block;width:100%;margin-top:10px;border-style:dashed}
+button.b.addrow{display:block;width:100%;min-height:92px;margin-top:12px;border-style:dashed;font-size:22px;font-weight:700}
 button.b.show{display:block;width:100%;min-height:56px;margin-top:22px;font-size:18px}
 .qrbox{background:#fff;display:grid;place-items:center;aspect-ratio:1/1;text-align:center}
 .qrbox svg{width:100%;height:100%;display:block}
 .err{color:var(--warn);font-weight:500}
-.bar{position:fixed;left:0;right:0;bottom:0;visibility:hidden;padding:10px max(4vw,14px) calc(10px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);display:flex;gap:10px}
-.bar.on{visibility:visible}.bar button{flex:1;font-weight:700}
-@media(min-width:900px){.bar{display:none}}
 /* Vollbild-QR: oben nur Name + Schließen, der Rest für den Code */
 .full{position:fixed;inset:0;color-scheme:light;background:#fff;color:#111;display:none;flex-direction:column;z-index:10;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
@@ -99,7 +98,7 @@ button.b.show{display:block;width:100%;min-height:56px;margin-top:22px;font-size
   </header>
   <div class="infobox" id="info" hidden>
     <p>DPH wählen oder neu anlegen, Schlagzahlen je 10 cm eingeben, dann den QR-Code in der Windows-App in der passenden DPH scannen.</p>
-    <p>„+ Zeile“ (über der Tastatur) oder Enter legt eine neue Zeile an, vorausgefüllt mit dem letzten Wert. Gleicher Wert: einfach nochmal drücken. Anderer Wert: direkt lostippen, der Vorschlag wird überschrieben. Ein leeres Feld wird als „kein Wert“ (999) übertragen. Alle DPHs bleiben auf diesem Handy gespeichert.</p>
+    <p>„+ Zeile“ unter der letzten Zeile oder Enter bzw. „Weiter“ auf der Tastatur legt eine neue Zeile an, vorausgefüllt mit dem letzten Wert. Gleicher Wert: einfach nochmal drücken. Anderer Wert: direkt lostippen, der Vorschlag wird überschrieben. Ein leeres Feld wird als „kein Wert“ (999) übertragen. Alle DPHs bleiben auf diesem Handy gespeichert.</p>
     <p>Zum Scannen „QR-Code anzeigen“, Displayhelligkeit hoch, Tablet-Kamera ca. 20–30 cm entfernt halten.</p>
   </div>
 
@@ -143,7 +142,6 @@ button.b.show{display:block;width:100%;min-height:56px;margin-top:22px;font-size
 </div>
 <div class="msg" id="msg" role="status"></div>
 
-<div class="bar" id="bar"><button class="b" id="add2" type="button">+ Zeile</button></div>
 
 <script src="qr.js"></script>
 <script>
@@ -219,7 +217,7 @@ function encode() {
 function renderList(newIdx) {
   const s = start();
   $('list').innerHTML = values.map((v, i) =>
-    `<div class="row${i === newIdx ? ' new' : ''}">
+    `<div class="row${i === newIdx ? ' new' : ''}${(s + i * STEP) % 100 === 0 ? ' meter' : ''}">
       <div class="depth">${i === values.length - 1 ? `${m(s + i * STEP - STEP).replace('\u00a0m', '')}–${m(s + i * STEP)}` : m(s + i * STEP)}</div>
       <input type="number" inputmode="numeric" enterkeyhint="next" min="0" max="${N10_MAX}" data-i="${i}" value="${v == null ? '' : v}" class="${v == null ? 'empty' : v > N10_MAX ? 'bad' : ''}" aria-label="n10 bei ${m(s + i * STEP)}">
       <button class="del" type="button" data-del="${i}" aria-label="Zeile löschen">×</button>
@@ -337,15 +335,8 @@ $('dlgCopy').addEventListener('click', async () => {
   setTimeout(() => { $('dlgCopy').textContent = 'Kopieren'; }, 2000);
 });
 $('infoBtn').addEventListener('click', () => { const open = $('info').hidden; $('info').hidden = !open; $('infoBtn').setAttribute('aria-expanded', String(open)); });
-$('add2').addEventListener('click', next);
-// Leiste nur beim Eingeben einblenden
-$('list').addEventListener('focusin', () => $('bar').classList.add('on'));
-$('list').addEventListener('focusout', () => setTimeout(() => { if (!document.activeElement || !document.activeElement.closest || !document.activeElement.closest('#list')) $('bar').classList.remove('on'); }, 150));
-// Leiste bleibt über der Bildschirmtastatur und nimmt dem Eingabefeld nicht den Fokus
-$('bar').addEventListener('pointerdown', e => { if (e.target.closest('#add2')) e.preventDefault(); });
-const vv = window.visualViewport;
-const placeBar = () => { if (!vv) return; const off = window.innerHeight - vv.height - vv.offsetTop; $('bar').style.transform = off > 1 ? `translateY(${-off}px)` : ''; };
-if (vv) { vv.addEventListener('resize', placeBar); vv.addEventListener('scroll', placeBar); }
+// „+ Zeile“ nimmt dem Eingabefeld nicht den Fokus, damit die Tastatur offen bleibt
+$('add').addEventListener('pointerdown', e => { if (document.activeElement && document.activeElement.closest('#list')) e.preventDefault(); });
 function confirmBtn(id, label, ask, action) {
   $(id).addEventListener('click', () => {
     if ($(id).dataset.sure) { resetConfirm(); action(); }
