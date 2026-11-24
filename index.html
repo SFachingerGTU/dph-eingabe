@@ -70,6 +70,7 @@ button.b{font:inherit;font-weight:500;min-height:46px;padding:0 16px;border-radi
 button.b.primary{background:var(--accent);color:#111;border-color:#111;font-weight:700}
 button.b.ghost{border-color:var(--line);color:var(--muted)}
 .note{font-size:13px;color:var(--muted);margin-top:10px}
+button.b.addrow{display:block;width:100%;margin-top:10px;border-style:dashed}
 button.b.show{display:block;width:100%;min-height:56px;margin-top:22px;font-size:18px}
 .qrbox{background:#fff;display:grid;place-items:center;aspect-ratio:1/1;text-align:center}
 .qrbox svg{width:100%;height:100%;display:block}
@@ -112,6 +113,7 @@ button.b.show{display:block;width:100%;min-height:56px;margin-top:22px;font-size
       <div class="rows">
         <div class="cols"><span>Tiefe</span><span>n10</span><span></span></div>
         <div id="list"></div>
+        <button class="b addrow" id="add" type="button">+ Zeile</button>
       </div>
 
       <div class="checks">
@@ -120,7 +122,6 @@ button.b.show{display:block;width:100%;min-height:56px;margin-top:22px;font-size
       </div>
 
       <div class="tools">
-        <button class="b" id="add" type="button">+ Zeile</button>
         <button class="b ghost" id="remove" type="button">DPH löschen</button>
       </div>
       <p class="note" id="hint"></p>
