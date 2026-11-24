@@ -1,0 +1,12 @@
+{
+  "name": "dph-eingabe-tests",
+  "private": true,
+  "description": "Nur zur Entwicklung: prüft qr.js gegen qrcode-generator und jsQR",
+  "scripts": {
+    "test": "node qr.test.js"
+  },
+  "devDependencies": {
+    "jsqr": "^1.4.0",
+    "qrcode-generator": "1.4.4"
+  }
+}

@@ -1,0 +1,15 @@
+# Betriebssystem / Editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Node (nur für die Tests in test/)
+node_modules/
+
+# Echte Messdaten und Exporte nicht ins öffentliche Repository
+*.json
+!manifest.json
+!test/package.json
+!test/package-lock.json
+exports/

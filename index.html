@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DPH">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>DPH Eingabe</title>
+<style>
+/*
+VOICE: nüchternes Feldwerkzeug, schnell mit dem Daumen bedienbar
+IDEA: Sondierprotokoll – Tiefenspalte links, Schlagzahl rechts
+PICTURE: die Eingabeliste selbst, daneben/darunter der QR-Code auf weißem Feld
+COLOUR and TYPE: Weiß, Schwarz, Betongrau-Flächen, Signalgelb nur auf dem Hauptknopf; System-Schrift (nichts von fremden Servern)
+LAYOUT: eine Spalte am Handy, ab 900px Eingabe links und QR rechts
+*/
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#1a1a19);--ink:light-dark(#111111,#ededea);--muted:light-dark(#5b5b57,#a6a6a0);
+--plane:light-dark(#ececE8,#262624);--line:light-dark(#d8d8d4,#3a3a37);--accent:#ffe600;--warn:light-dark(#b3261e,#ff8a80);
+--font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);overflow-x:clip}
+.wrap{max-width:1100px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) max(4vw,14px) 90px}
+h1{font-size:32px;line-height:1.05;margin:4px 0 4px;font-weight:700;text-wrap:balance}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 16px}
+.top h1{margin:0}.topbtns{display:flex;gap:8px;align-items:center;flex:none}
+.msg{position:fixed;left:50%;top:16px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:20;max-width:90vw;display:none}.msg.on{display:block}
+.dlg textarea{width:100%;height:50vh;font:13px/1.4 ui-monospace,monospace;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.dlg{position:fixed;inset:0;background:var(--bg);padding:16px;z-index:15;display:none;flex-direction:column;gap:12px}.dlg.on{display:flex}
+@media(max-width:420px){.top h1{font-size:26px}#exportBtn{padding:0 12px}}
+.info{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--ink);background:var(--bg);color:var(--ink);font:700 19px/1 var(--font);font-style:italic;cursor:pointer}
+.info[aria-expanded=true]{background:var(--ink);color:var(--bg)}
+.infobox{background:var(--plane);border-radius:10px;padding:4px 16px;margin:-4px 0 16px;color:var(--ink)}
+.infobox p{margin:12px 0}.infobox h2{font-size:17px;line-height:1.3;margin:18px 0 6px}.infobox h3{font-size:16px;margin:14px 0 4px}.infobox ol{margin:0 0 14px;padding-left:1.3em}.infobox li{margin:4px 0}
+.note:empty{display:none}
+.grid{display:grid;gap:22px}
+@media(min-width:900px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,420px);align-items:start}.qrcol{position:sticky;top:16px}}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 12px;margin:0 -2px 6px;scroll-snap-type:x proximity}
+.tab{flex:none;scroll-snap-align:start;font:inherit;min-height:44px;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left;line-height:1.15}
+.tab small{display:block;font-size:13px;color:var(--muted)}
+.tab[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab[aria-selected=true] small{color:inherit;opacity:.75}
+.tab.new{border-style:dashed;color:var(--muted);align-self:stretch}
+.head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;background:var(--plane);padding:14px;border-radius:10px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+input{width:100%;font:inherit;font-size:18px;padding:10px 12px;min-height:46px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.rows{margin-top:16px;border-top:2px solid var(--ink)}
+.row{display:grid;grid-template-columns:112px minmax(0,1fr) 44px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.depth{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;font-weight:500}
+.depth small{color:var(--muted);font-weight:400}
+.row input{text-align:right;font-variant-numeric:tabular-nums}
+.row input.empty{border-style:dashed}
+.del{width:44px;height:44px;border:0;background:none;color:var(--muted);font-size:22px;border-radius:8px;cursor:pointer}
+.del:hover{background:var(--plane);color:var(--ink)}
+.cols{display:grid;grid-template-columns:112px minmax(0,1fr) 44px;gap:10px;font-size:13px;color:var(--muted);padding:8px 0 4px}
+.cols span:first-child{text-align:right}.cols span:nth-child(2){text-align:right;padding-right:12px}
+.tools{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+button.b{font:inherit;font-weight:500;min-height:46px;padding:0 16px;border-radius:8px;border:1px solid var(--ink);background:var(--bg);color:var(--ink);cursor:pointer}
+button.b.primary{background:var(--accent);color:#111;border-color:#111;font-weight:700}
+button.b.ghost{border-color:var(--line);color:var(--muted)}
+.note{font-size:13px;color:var(--muted);margin-top:10px}
+.card{background:var(--plane);border-radius:10px;padding:16px}
+.qrbox{background:#fff;border-radius:8px;padding:14px;display:grid;place-items:center;aspect-ratio:1/1}
+.qrbox svg{width:100%;height:100%;display:block}
+.stats{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 8px;font-variant-numeric:tabular-nums}
+.stats b{font-weight:700}
+code{display:block;font-size:13px;overflow-wrap:anywhere;color:var(--muted);background:var(--bg);border-radius:6px;padding:8px 10px;margin:8px 0;max-height:7.5em;overflow:auto}
+.err{color:var(--warn);font-weight:500}
+.bar{position:fixed;left:0;right:0;bottom:0;visibility:hidden;padding:10px max(4vw,14px) calc(10px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);display:flex;gap:10px}
+.bar.on{visibility:visible}.bar button{flex:1;font-weight:700}
+@media(min-width:900px){.bar{display:none}}
+.full{position:fixed;inset:0;background:#fff;color:#111;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:14px;z-index:10}
+.full.on{display:flex}
+.full .qrbox{width:min(92vw,78vh);padding:0}
+.full p{margin:0;text-align:center;font-size:17px}
+.full button.b{background:#fff;color:#111;border-color:#111}
+@media(prefers-reduced-motion:no-preference){.row.new{animation:in .25s ease-out}@keyframes in{from{background:var(--accent)}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>DPH Messwerte erfassen</h1>
+    <div class="topbtns"><button class="b" id="exportBtn" type="button">JSON exportieren</button>
+    <button class="info" id="infoBtn" type="button" aria-expanded="false" aria-controls="info" aria-label="Info">i</button></div>
+  </header>
+  <div class="infobox" id="info" hidden>
+    <p>DPH wählen oder neu anlegen, Schlagzahlen je 10 cm eingeben, dann den QR-Code in der Windows-App in der passenden DPH scannen.</p>
+    <p>„+ Zeile“ (über der Tastatur) oder Enter legt eine neue Zeile an, vorausgefüllt mit dem letzten Wert. Gleicher Wert: einfach nochmal drücken. Anderer Wert: direkt lostippen, der Vorschlag wird überschrieben. Ein leeres Feld wird als „kein Wert“ (999) übertragen. Alle DPHs bleiben auf diesem Handy gespeichert.</p>
+  </div>
+
+  <div class="tabs" id="tabs" role="tablist" aria-label="DPHs"></div>
+  <div class="grid">
+    <section>
+      <div class="head">
+        <div><label for="name">Bezeichnung</label><input id="name" type="text" autocomplete="off"></div>
+        <div><label for="pre">Vorgeschachtet (cm)</label><input id="pre" type="number" inputmode="numeric" min="0" max="9980" step="10"></div>
+      </div>
+
+      <div class="rows">
+        <div class="cols"><span>Tiefe</span><span>n10</span><span></span></div>
+        <div id="list"></div>
+      </div>
+
+      <div class="tools">
+        <button class="b" id="add" type="button">+ Zeile</button>
+        <button class="b ghost" id="remove" type="button">DPH löschen</button>
+      </div>
+      <p class="note" id="hint"></p>
+    </section>
+
+    <aside class="qrcol">
+      <div class="card">
+        <div class="qrbox" id="qr"></div>
+        <div class="stats" id="stats"></div>
+        <code id="payload"></code>
+        <div class="tools">
+          <button class="b primary" id="show" type="button">QR groß anzeigen</button>
+          <button class="b" id="copy" type="button">Code kopieren</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+
+<div class="full" id="full" role="dialog" aria-modal="true" aria-label="QR-Code">
+  <p id="fullTitle"></p>
+  <div class="qrbox" id="qrFull"></div>
+  <p>Displayhelligkeit hoch, Tablet-Kamera ca. 20–30 cm entfernt.</p>
+  <button class="b" id="close" type="button">Schließen</button>
+</div>
+
+<div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-label="JSON-Export">
+  <p>Download ist hier nicht möglich. JSON kopieren und als .json-Datei speichern.<br><small id="dlgWhy"></small></p>
+  <textarea id="dlgText" readonly></textarea>
+  <div class="tools"><button class="b primary" id="dlgCopy" type="button">Kopieren</button><button class="b" id="dlgClose" type="button">Schließen</button></div>
+</div>
+<div class="msg" id="msg" role="status"></div>
+
+<div class="bar" id="bar"><button class="b" id="add2" type="button">+ Zeile</button></div>
+
+<script src="qr.js"></script>
+<script>
+{
+const $ = id => document.getElementById(id);
+const STEP = 10, MAX = 200, KEY = 'dph-qr-v2';
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const guid = () => '{' + (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); })).toUpperCase() + '}';
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+let dphs = [], cur = '';
+
+try {
+  const d = JSON.parse(localStorage.getItem(KEY) || 'null');
+  if (d && Array.isArray(d.list) && d.list.length) { dphs = d.list; cur = d.cur; }
+  else {
+    const old = JSON.parse(localStorage.getItem('dph-qr-draft-v1') || 'null');
+    if (old && Array.isArray(old.v)) dphs = [{ id: uid(), name: old.n || 'DPH 1', pre: (old.s || 130) - 10, values: old.v }];
+  }
+} catch (e) {}
+if (!dphs.length) dphs = [{ id: uid(), name: 'DPH 1', pre: 120, values: [null] }];
+if (!dphs.some(d => d.id === cur)) cur = dphs[0].id;
+
+const D = () => dphs.find(d => d.id === cur);
+let values = D().values;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+for (const d of dphs) { if (d.pre == null) d.pre = (d.start || 130) - 10; if (!d.guid) d.guid = guid(); if (!d.date) d.date = today(); }
+const PRE_DEFAULT = 120;
+const pre = () => { const p = parseInt($('pre').value, 10); return Number.isFinite(p) && p >= 0 ? p : PRE_DEFAULT; };
+const start = () => pre() + STEP;
+const m = cm => (cm / 100).toFixed(2).replace('.', ',') + '\u00a0m';
+
+function save() {
+  const d = D(); d.values = values; d.pre = pre(); delete d.start; d.name = $('name').value;
+  try { localStorage.setItem(KEY, JSON.stringify({ list: dphs, cur })); } catch (e) {}
+  renderTabs();
+}
+
+function renderTabs() {
+  $('tabs').innerHTML = dphs.map(d =>
+    `<button class="tab" role="tab" type="button" data-id="${esc(d.id)}" aria-selected="${d.id === cur}">${esc(d.name.trim() || 'Ohne Namen')}<small>${d.values.length} Werte</small></button>`
+  ).join('') + '<button class="tab new" type="button" id="newDph">+ Neue DPH</button>';
+}
+
+function select(id) {
+  cur = id; const d = D(); values = d.values;
+  $('name').value = d.name; $('pre').value = d.pre;
+  resetConfirm();
+  renderList(); renderQr();
+  const t = document.querySelector(`.tab[data-id="${id}"]`); if (t) t.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+}
+
+function newDph() {
+  const nums = dphs.map(d => parseInt((d.name.match(/DPH\s*(\d+)/i) || [])[1], 10)).filter(Number.isFinite);
+  const n = (nums.length ? Math.max(...nums) : 0) + 1;
+  const d = { id: uid(), guid: guid(), date: today(), name: 'DPH ' + n, pre: PRE_DEFAULT, values: [null] };
+  dphs.push(d); select(d.id); focusRow(0);
+}
+
+function encode() {
+  let s = '1' + String(Math.min(start(), 9999)).padStart(4, '0');
+  for (const v of values) s += String(v == null ? 999 : Math.max(0, Math.min(998, v))).padStart(3, '0');
+  return s;
+}
+
+function renderList(newIdx) {
+  const s = start();
+  $('list').innerHTML = values.map((v, i) =>
+    `<div class="row${i === newIdx ? ' new' : ''}">
+      <div class="depth">${i === values.length - 1 ? `${m(s + i * STEP - STEP).replace('\u00a0m', '')}–${m(s + i * STEP)}` : m(s + i * STEP)}</div>
+      <input type="number" inputmode="numeric" enterkeyhint="next" min="0" max="998" data-i="${i}" value="${v == null ? '' : v}" class="${v == null ? 'empty' : ''}" aria-label="n10 bei ${m(s + i * STEP)}">
+      <button class="del" type="button" data-del="${i}" aria-label="Zeile löschen">×</button>
+    </div>`).join('');
+}
+
+function svgFor(qr) {
+  const n = qr.size, q = 4; let p = '';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) p += `M${c + q} ${r + q}h1v1h-1z`;
+  return `<svg viewBox="0 0 ${n + 2 * q} ${n + 2 * q}" shape-rendering="crispEdges" role="img" aria-label="QR-Code"><rect width="100%" height="100%" fill="#fff"/><path d="${p}" fill="#000"/></svg>`;
+}
+
+function renderQr() {
+  const data = encode(), s = start();
+  $('payload').textContent = data;
+  const last = values.length ? s + (values.length - 1) * STEP : s;
+  let ver = '–';
+  if (typeof QR !== 'object') {
+    $('qr').innerHTML = '<p class="err">qr.js konnte nicht geladen werden.</p>';
+  } else if (!values.length) {
+    $('qr').innerHTML = '<p>Noch keine Werte eingegeben.</p>';
+  } else {
+    try {
+      const qr = QR.encodeNumeric(data);
+      ver = qr.version;
+      const svg = svgFor(qr);
+      $('qr').innerHTML = svg; $('qrFull').innerHTML = svg;
+    } catch (e) {
+      $('qr').innerHTML = `<p class="err">${esc(e.message)}</p>`;
+    }
+  }
+  const name = $('name').value.trim();
+  $('stats').innerHTML = `<span><b>${values.length}</b> Werte</span><span><b>${m(s)} – ${m(last)}</b></span><span>QR-Version <b>${ver}</b></span><span><b>${data.length}</b> Ziffern</span>`;
+  $('fullTitle').textContent = `${name || 'DPH'} · ${values.length} Werte · ${m(s)} – ${m(last)}`;
+  save();
+}
+
+function focusRow(i) { const el = document.querySelector(`#list input[data-i="${i}"]`); if (el) { el.focus(); el.select(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
+
+function add(val) {
+  if (values.length >= MAX) { $('hint').textContent = `Maximal ${MAX} Werte (20 m).`; return; }
+  values.push(val); renderList(values.length - 1); renderQr(); focusRow(values.length - 1);
+}
+
+$('list').addEventListener('input', e => {
+  const i = e.target.dataset.i; if (i == null) return;
+  const v = e.target.value.trim() === '' ? null : Math.max(0, Math.min(998, parseInt(e.target.value, 10) || 0));
+  values[+i] = v; e.target.classList.toggle('empty', v == null); renderQr();
+});
+$('list').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.target.dataset.i == null) return;
+  e.preventDefault(); const i = +e.target.dataset.i;
+  if (i === values.length - 1) next(); else focusRow(i + 1);
+});
+$('list').addEventListener('click', e => {
+  const d = e.target.dataset.del; if (d == null) return;
+  values.splice(+d, 1); renderList(); renderQr();
+});
+$('pre').addEventListener('input', () => { renderList(); renderQr(); });
+$('name').addEventListener('input', renderQr);
+const next = () => add(values.length ? values[values.length - 1] : null);
+$('add').addEventListener('click', next);
+function buildExport() {
+  save();
+  return JSON.stringify({ 'indirekt-drillings': dphs.map(d => {
+    const first = (d.pre ?? PRE_DEFAULT) + STEP;
+    return {
+      id: d.guid, type: 'dph', name: d.name.trim() || 'DPH',
+      bearbeiter_sondierung: '', datum: d.date, date: d.date, DatumSondierung: d.date, BearbeiterSondierung: '',
+      xKoordinate: '', yKoordinate: '', lageNhn: '', groundwaterLevels: [], coordinateSystemEpsgCode: '', connectedBoreholeId: '',
+      measurements: d.values.map((v, i) => ({ depthCm: first + i * STEP, n10: v == null ? null : v })),
+      status: 'feld_fertig', preExcavationDepthCm: d.pre ?? PRE_DEFAULT,
+      abbruchGeraeteauslastung: false, endteufeErreicht: false, bemerkungen: ''
+    };
+  }) }, null, 2);
+}
+function toast(text) { $('msg').textContent = text; $('msg').classList.add('on'); setTimeout(() => $('msg').classList.remove('on'), 2500); }
+// Export: am Handy über das Teilen-Menü (AirDrop, Dateien, Messenger), sonst normaler Download
+$('exportBtn').addEventListener('click', async () => {
+  const json = buildExport(), filename = `DPH-Export_${today()}.json`;
+  const file = new File([json], filename, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: filename }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  try {
+    const url = URL.createObjectURL(file), a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast(`${dphs.length} DPH exportiert`); return;
+  } catch (e) {}
+  $('dlgWhy').textContent = '';
+  $('dlgText').value = json; $('dlg').classList.add('on');
+});
+$('dlgClose').addEventListener('click', () => $('dlg').classList.remove('on'));
+$('dlgCopy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('dlgText').value); $('dlgCopy').textContent = 'Kopiert ✓'; }
+  catch (e) { $('dlgText').select(); $('dlgCopy').textContent = 'Markiert – jetzt kopieren'; }
+  setTimeout(() => { $('dlgCopy').textContent = 'Kopieren'; }, 2000);
+});
+$('infoBtn').addEventListener('click', () => { const open = $('info').hidden; $('info').hidden = !open; $('infoBtn').setAttribute('aria-expanded', String(open)); });
+$('add2').addEventListener('click', next);
+// Leiste nur beim Eingeben einblenden
+$('list').addEventListener('focusin', () => $('bar').classList.add('on'));
+$('list').addEventListener('focusout', () => setTimeout(() => { if (!document.activeElement || !document.activeElement.closest || !document.activeElement.closest('#list')) $('bar').classList.remove('on'); }, 150));
+// Leiste bleibt über der Bildschirmtastatur und nimmt dem Eingabefeld nicht den Fokus
+$('bar').addEventListener('pointerdown', e => { if (e.target.closest('#add2')) e.preventDefault(); });
+const vv = window.visualViewport;
+const placeBar = () => { if (!vv) return; const off = window.innerHeight - vv.height - vv.offsetTop; $('bar').style.transform = off > 1 ? `translateY(${-off}px)` : ''; };
+if (vv) { vv.addEventListener('resize', placeBar); vv.addEventListener('scroll', placeBar); }
+function confirmBtn(id, label, ask, action) {
+  $(id).addEventListener('click', () => {
+    if ($(id).dataset.sure) { resetConfirm(); action(); }
+    else { $(id).dataset.sure = '1'; $(id).textContent = ask; setTimeout(resetConfirm, 3000); }
+  });
+  $(id).dataset.label = label;
+}
+function resetConfirm() { for (const id of ['remove']) { delete $(id).dataset.sure; if ($(id).dataset.label) $(id).textContent = $(id).dataset.label; } }
+confirmBtn('remove', 'DPH löschen', 'Wirklich löschen?', () => {
+  const i = dphs.findIndex(d => d.id === cur); dphs.splice(i, 1);
+  if (!dphs.length) dphs.push({ id: uid(), guid: guid(), date: today(), name: 'DPH 1', pre: PRE_DEFAULT, values: [null] });
+  select(dphs[Math.max(0, i - 1)].id);
+});
+$('tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'newDph') newDph(); else if (b.dataset.id) select(b.dataset.id);
+});
+const openFull = () => { renderQr(); $('full').classList.add('on'); $('close').focus(); };
+$('show').addEventListener('click', openFull);
+$('close').addEventListener('click', () => $('full').classList.remove('on'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('full').classList.remove('on'); });
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(encode()); $('copy').textContent = 'Kopiert ✓'; }
+  catch (e) { $('copy').textContent = 'Kopieren nicht möglich'; }
+  setTimeout(() => { $('copy').textContent = 'Code kopieren'; }, 1800);
+});
+
+select(cur);
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
