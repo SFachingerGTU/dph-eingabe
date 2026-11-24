@@ -27,7 +27,7 @@ LAYOUT: eine Spalte am Handy, ab 900px Eingabe links und QR rechts
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);overflow-x:clip}
-.wrap{max-width:1100px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) max(4vw,14px) 90px}
+.wrap{max-width:640px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) max(4vw,14px) 90px}
 h1{font-size:32px;line-height:1.05;margin:4px 0 4px;font-weight:700;text-wrap:balance}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 16px}
 .top h1{margin:0}.topbtns{display:flex;gap:8px;align-items:center;flex:none}
@@ -40,8 +40,6 @@ h1{font-size:32px;line-height:1.05;margin:4px 0 4px;font-weight:700;text-wrap:ba
 .infobox{background:var(--plane);border-radius:10px;padding:4px 16px;margin:-4px 0 16px;color:var(--ink)}
 .infobox p{margin:12px 0}.infobox h2{font-size:17px;line-height:1.3;margin:18px 0 6px}.infobox h3{font-size:16px;margin:14px 0 4px}.infobox ol{margin:0 0 14px;padding-left:1.3em}.infobox li{margin:4px 0}
 .note:empty{display:none}
-.grid{display:grid;gap:22px}
-@media(min-width:900px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,420px);align-items:start}.qrcol{position:sticky;top:16px}}
 .tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 12px;margin:0 -2px 6px;scroll-snap-type:x proximity}
 .tab{flex:none;scroll-snap-align:start;font:inherit;min-height:44px;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;text-align:left;line-height:1.15}
 .tab small{display:block;font-size:13px;color:var(--muted)}
@@ -52,6 +50,11 @@ h1{font-size:32px;line-height:1.05;margin:4px 0 4px;font-weight:700;text-wrap:ba
 label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
 input{width:100%;font:inherit;font-size:18px;padding:10px 12px;min-height:46px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
 input:focus-visible,button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+input.bad{border:2px solid var(--warn)}
+.head .note{margin:6px 0 0}
+.checks{display:grid;gap:2px;margin-top:14px}
+label.check{display:flex;align-items:center;gap:12px;min-height:44px;margin:0;font-size:16px;color:var(--ink);cursor:pointer}
+.check input{flex:none;width:24px;height:24px;min-height:0;padding:0;margin:0;accent-color:var(--ink)}
 .rows{margin-top:16px;border-top:2px solid var(--ink)}
 .row{display:grid;grid-template-columns:112px minmax(0,1fr) 44px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
 .depth{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;font-weight:500}
@@ -67,21 +70,22 @@ button.b{font:inherit;font-weight:500;min-height:46px;padding:0 16px;border-radi
 button.b.primary{background:var(--accent);color:#111;border-color:#111;font-weight:700}
 button.b.ghost{border-color:var(--line);color:var(--muted)}
 .note{font-size:13px;color:var(--muted);margin-top:10px}
-.card{background:var(--plane);border-radius:10px;padding:16px}
-.qrbox{background:#fff;border-radius:8px;padding:14px;display:grid;place-items:center;aspect-ratio:1/1}
+button.b.show{display:block;width:100%;min-height:56px;margin-top:22px;font-size:18px}
+.qrbox{background:#fff;display:grid;place-items:center;aspect-ratio:1/1;text-align:center}
 .qrbox svg{width:100%;height:100%;display:block}
-.stats{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 8px;font-variant-numeric:tabular-nums}
-.stats b{font-weight:700}
-code{display:block;font-size:13px;overflow-wrap:anywhere;color:var(--muted);background:var(--bg);border-radius:6px;padding:8px 10px;margin:8px 0;max-height:7.5em;overflow:auto}
 .err{color:var(--warn);font-weight:500}
 .bar{position:fixed;left:0;right:0;bottom:0;visibility:hidden;padding:10px max(4vw,14px) calc(10px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);display:flex;gap:10px}
 .bar.on{visibility:visible}.bar button{flex:1;font-weight:700}
 @media(min-width:900px){.bar{display:none}}
-.full{position:fixed;inset:0;background:#fff;color:#111;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:14px;z-index:10}
+/* Vollbild-QR: oben nur Name + Schließen, der Rest für den Code */
+.full{position:fixed;inset:0;color-scheme:light;background:#fff;color:#111;display:none;flex-direction:column;z-index:10;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 .full.on{display:flex}
-.full .qrbox{width:min(92vw,78vh);padding:0}
-.full p{margin:0;text-align:center;font-size:17px}
-.full button.b{background:#fff;color:#111;border-color:#111}
+.fullhead{flex:none;display:flex;align-items:center;gap:8px;padding:2px 2px 0 14px}
+.fullhead p{flex:1;margin:0;font-size:20px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fullhead button{flex:none;width:44px;height:44px;border:0;border-radius:8px;background:none;color:#111;font-size:30px;line-height:1;cursor:pointer}
+.qrwrap{flex:1;min-height:0;display:grid;place-items:center;padding:6px;container-type:size}
+.full .qrbox{width:min(calc(100vw - 12px),calc(100dvh - 60px));width:min(100cqw,100cqh)}
 @media(prefers-reduced-motion:no-preference){.row.new{animation:in .25s ease-out}@keyframes in{from{background:var(--accent)}}}
 </style>
 </head>
@@ -95,14 +99,14 @@ code{display:block;font-size:13px;overflow-wrap:anywhere;color:var(--muted);back
   <div class="infobox" id="info" hidden>
     <p>DPH wählen oder neu anlegen, Schlagzahlen je 10 cm eingeben, dann den QR-Code in der Windows-App in der passenden DPH scannen.</p>
     <p>„+ Zeile“ (über der Tastatur) oder Enter legt eine neue Zeile an, vorausgefüllt mit dem letzten Wert. Gleicher Wert: einfach nochmal drücken. Anderer Wert: direkt lostippen, der Vorschlag wird überschrieben. Ein leeres Feld wird als „kein Wert“ (999) übertragen. Alle DPHs bleiben auf diesem Handy gespeichert.</p>
+    <p>Zum Scannen „QR-Code anzeigen“, Displayhelligkeit hoch, Tablet-Kamera ca. 20–30 cm entfernt halten.</p>
   </div>
 
   <div class="tabs" id="tabs" role="tablist" aria-label="DPHs"></div>
-  <div class="grid">
-    <section>
+  <section>
       <div class="head">
         <div><label for="name">Bezeichnung</label><input id="name" type="text" autocomplete="off"></div>
-        <div><label for="pre">Vorgeschachtet (cm)</label><input id="pre" type="number" inputmode="numeric" min="0" max="9980" step="10"></div>
+        <div><label for="pre">Vorgeschachtet (cm)</label><input id="pre" type="number" inputmode="numeric" min="0" max="9980" step="10" aria-describedby="preErr"><p class="note err" id="preErr"></p></div>
       </div>
 
       <div class="rows">
@@ -110,33 +114,25 @@ code{display:block;font-size:13px;overflow-wrap:anywhere;color:var(--muted);back
         <div id="list"></div>
       </div>
 
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="abbruch"> Abbruch wegen Geräteauslastung</label>
+        <label class="check"><input type="checkbox" id="endteufe"> Endteufe erreicht</label>
+      </div>
+
       <div class="tools">
         <button class="b" id="add" type="button">+ Zeile</button>
         <button class="b ghost" id="remove" type="button">DPH löschen</button>
       </div>
       <p class="note" id="hint"></p>
-    </section>
 
-    <aside class="qrcol">
-      <div class="card">
-        <div class="qrbox" id="qr"></div>
-        <div class="stats" id="stats"></div>
-        <code id="payload"></code>
-        <div class="tools">
-          <button class="b primary" id="show" type="button">QR groß anzeigen</button>
-          <button class="b" id="copy" type="button">Code kopieren</button>
-        </div>
-      </div>
-    </aside>
-  </div>
+      <button class="b primary show" id="show" type="button">QR-Code anzeigen</button>
+  </section>
 </div>
 
 
 <div class="full" id="full" role="dialog" aria-modal="true" aria-label="QR-Code">
-  <p id="fullTitle"></p>
-  <div class="qrbox" id="qrFull"></div>
-  <p>Displayhelligkeit hoch, Tablet-Kamera ca. 20–30 cm entfernt.</p>
-  <button class="b" id="close" type="button">Schließen</button>
+  <div class="fullhead"><p id="fullTitle"></p><button id="close" type="button" aria-label="Schließen">×</button></div>
+  <div class="qrwrap"><div class="qrbox" id="qrFull"></div></div>
 </div>
 
 <div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-label="JSON-Export">
@@ -152,9 +148,8 @@ code{display:block;font-size:13px;overflow-wrap:anywhere;color:var(--muted);back
 <script>
 {
 const $ = id => document.getElementById(id);
-const STEP = 10, MAX = 200, KEY = 'dph-qr-v2';
+const STEP = 10, MAX = 200, KEY = 'dph-qr-v2', N10_MAX = 120;
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const guid = () => '{' + (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); })).toUpperCase() + '}';
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 let dphs = [], cur = '';
 
@@ -172,14 +167,18 @@ if (!dphs.some(d => d.id === cur)) cur = dphs[0].id;
 const D = () => dphs.find(d => d.id === cur);
 let values = D().values;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-for (const d of dphs) { if (d.pre == null) d.pre = (d.start || 130) - 10; if (!d.guid) d.guid = guid(); if (!d.date) d.date = today(); }
+for (const d of dphs) { if (d.pre == null) d.pre = (d.start || 130) - 10; d.pre = up10(d.pre); delete d.guid; if (!d.date) d.date = today(); }
 const PRE_DEFAULT = 120;
-const pre = () => { const p = parseInt($('pre').value, 10); return Number.isFinite(p) && p >= 0 ? p : PRE_DEFAULT; };
+// Tiefen nur in 10-cm-Schritten: Vorschacht wird auf volle 10 cm aufgerundet
+function up10(cm) { return Math.min(9980, Math.ceil(cm / STEP) * STEP); }
+const pre = () => { const p = parseInt($('pre').value, 10); return Number.isFinite(p) && p >= 0 ? up10(p) : PRE_DEFAULT; };
+const n10 = v => v == null ? null : Math.max(0, Math.min(N10_MAX, v));
 const start = () => pre() + STEP;
 const m = cm => (cm / 100).toFixed(2).replace('.', ',') + '\u00a0m';
 
 function save() {
   const d = D(); d.values = values; d.pre = pre(); delete d.start; d.name = $('name').value;
+  d.abbruch = $('abbruch').checked; d.endteufe = $('endteufe').checked;
   try { localStorage.setItem(KEY, JSON.stringify({ list: dphs, cur })); } catch (e) {}
   renderTabs();
 }
@@ -192,7 +191,9 @@ function renderTabs() {
 
 function select(id) {
   cur = id; const d = D(); values = d.values;
-  $('name').value = d.name; $('pre').value = d.pre;
+  $('name').value = d.name; $('pre').value = d.pre; checkPre();
+  $('abbruch').checked = !!d.abbruch; $('endteufe').checked = !!d.endteufe;
+  $('hint').textContent = '';
   resetConfirm();
   renderList(); renderQr();
   const t = document.querySelector(`.tab[data-id="${id}"]`); if (t) t.scrollIntoView({ inline: 'nearest', block: 'nearest' });
@@ -201,13 +202,16 @@ function select(id) {
 function newDph() {
   const nums = dphs.map(d => parseInt((d.name.match(/DPH\s*(\d+)/i) || [])[1], 10)).filter(Number.isFinite);
   const n = (nums.length ? Math.max(...nums) : 0) + 1;
-  const d = { id: uid(), guid: guid(), date: today(), name: 'DPH ' + n, pre: PRE_DEFAULT, values: [null] };
+  const d = { id: uid(), date: today(), name: 'DPH ' + n, pre: PRE_DEFAULT, values: [null] };
   dphs.push(d); select(d.id); focusRow(0);
 }
 
+// QR-Inhalt, Formatversion 2 (siehe QR-FORMAT.md): 2 F TTTT WWW…
+// F = 0 keine Angabe, 1 Abbruch wegen Geräteauslastung, 2 Endteufe erreicht
 function encode() {
-  let s = '1' + String(Math.min(start(), 9999)).padStart(4, '0');
-  for (const v of values) s += String(v == null ? 999 : Math.max(0, Math.min(998, v))).padStart(3, '0');
+  const flag = $('abbruch').checked ? 1 : $('endteufe').checked ? 2 : 0;
+  let s = '2' + flag + String(Math.min(start(), 9990)).padStart(4, '0');
+  for (const v of values) s += String(v == null ? 999 : n10(v)).padStart(3, '0');
   return s;
 }
 
@@ -216,39 +220,29 @@ function renderList(newIdx) {
   $('list').innerHTML = values.map((v, i) =>
     `<div class="row${i === newIdx ? ' new' : ''}">
       <div class="depth">${i === values.length - 1 ? `${m(s + i * STEP - STEP).replace('\u00a0m', '')}–${m(s + i * STEP)}` : m(s + i * STEP)}</div>
-      <input type="number" inputmode="numeric" enterkeyhint="next" min="0" max="998" data-i="${i}" value="${v == null ? '' : v}" class="${v == null ? 'empty' : ''}" aria-label="n10 bei ${m(s + i * STEP)}">
+      <input type="number" inputmode="numeric" enterkeyhint="next" min="0" max="${N10_MAX}" data-i="${i}" value="${v == null ? '' : v}" class="${v == null ? 'empty' : v > N10_MAX ? 'bad' : ''}" aria-label="n10 bei ${m(s + i * STEP)}">
       <button class="del" type="button" data-del="${i}" aria-label="Zeile löschen">×</button>
     </div>`).join('');
 }
 
-function svgFor(qr) {
-  const n = qr.size, q = 4; let p = '';
+// q = Ruhezone in Modulen. 2 reichen, weil der ganze Bildschirm drumherum weiß ist.
+function svgFor(qr, q = 2) {
+  const n = qr.size; let p = '';
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) p += `M${c + q} ${r + q}h1v1h-1z`;
   return `<svg viewBox="0 0 ${n + 2 * q} ${n + 2 * q}" shape-rendering="crispEdges" role="img" aria-label="QR-Code"><rect width="100%" height="100%" fill="#fff"/><path d="${p}" fill="#000"/></svg>`;
 }
 
+// Speichert und zeichnet den QR-Code – Letzteres nur, solange die Vollbildansicht offen ist
 function renderQr() {
-  const data = encode(), s = start();
-  $('payload').textContent = data;
-  const last = values.length ? s + (values.length - 1) * STEP : s;
-  let ver = '–';
-  if (typeof QR !== 'object') {
-    $('qr').innerHTML = '<p class="err">qr.js konnte nicht geladen werden.</p>';
-  } else if (!values.length) {
-    $('qr').innerHTML = '<p>Noch keine Werte eingegeben.</p>';
-  } else {
-    try {
-      const qr = QR.encodeNumeric(data);
-      ver = qr.version;
-      const svg = svgFor(qr);
-      $('qr').innerHTML = svg; $('qrFull').innerHTML = svg;
-    } catch (e) {
-      $('qr').innerHTML = `<p class="err">${esc(e.message)}</p>`;
-    }
+  if ($('full').classList.contains('on')) {
+    let html;
+    if (typeof QR !== 'object') html = '<p class="err">qr.js konnte nicht geladen werden.</p>';
+    else if (!values.length) html = '<p>Noch keine Werte eingegeben.</p>';
+    else { try { html = svgFor(QR.encodeNumeric(encode())); } catch (e) { html = `<p class="err">${esc(e.message)}</p>`; } }
+    $('qrFull').innerHTML = html;
   }
   const name = $('name').value.trim();
-  $('stats').innerHTML = `<span><b>${values.length}</b> Werte</span><span><b>${m(s)} – ${m(last)}</b></span><span>QR-Version <b>${ver}</b></span><span><b>${data.length}</b> Ziffern</span>`;
-  $('fullTitle').textContent = `${name || 'DPH'} · ${values.length} Werte · ${m(s)} – ${m(last)}`;
+  $('fullTitle').textContent = name || 'DPH';
   save();
 }
 
@@ -261,8 +255,18 @@ function add(val) {
 
 $('list').addEventListener('input', e => {
   const i = e.target.dataset.i; if (i == null) return;
-  const v = e.target.value.trim() === '' ? null : Math.max(0, Math.min(998, parseInt(e.target.value, 10) || 0));
-  values[+i] = v; e.target.classList.toggle('empty', v == null); renderQr();
+  const raw = e.target.value.trim() === '' ? null : Math.max(0, parseInt(e.target.value, 10) || 0);
+  const tooHigh = raw != null && raw > N10_MAX;
+  values[+i] = n10(raw);
+  e.target.classList.toggle('empty', raw == null); e.target.classList.toggle('bad', tooHigh);
+  e.target.setAttribute('aria-invalid', String(tooHigh));
+  $('hint').textContent = tooHigh ? `n10 höchstens ${N10_MAX} – Wert wird als ${N10_MAX} übernommen.` : '';
+  renderQr();
+});
+// Beim Verlassen des Felds zu hohen Wert sichtbar auf das Maximum setzen
+$('list').addEventListener('change', e => {
+  const i = e.target.dataset.i; if (i == null || values[+i] == null) return;
+  if (e.target.value !== String(values[+i])) { e.target.value = values[+i]; e.target.classList.remove('bad'); e.target.setAttribute('aria-invalid', 'false'); }
 });
 $('list').addEventListener('keydown', e => {
   if (e.key !== 'Enter' || e.target.dataset.i == null) return;
@@ -271,9 +275,25 @@ $('list').addEventListener('keydown', e => {
 });
 $('list').addEventListener('click', e => {
   const d = e.target.dataset.del; if (d == null) return;
-  values.splice(+d, 1); renderList(); renderQr();
+  // Immer nachfragen: Löschen verschiebt alle folgenden Werte um 10 cm nach oben
+  const i = +d, v = values[i], depth = m(start() + i * STEP);
+  const what = `Wert bei ${depth} (${v == null ? 'leer' : v}) löschen?`;
+  const more = i < values.length - 1 ? '\n\nAlle Werte darunter rücken um 10 cm nach oben.' : '';
+  if (!confirm(what + more)) return;
+  values.splice(i, 1); renderList(); renderQr();
 });
-$('pre').addEventListener('input', () => { renderList(); renderQr(); });
+// Vorschacht: falsche Eingabe markieren, beim Verlassen auf 10 cm aufrunden
+function checkPre() {
+  const p = parseInt($('pre').value, 10), bad = Number.isFinite(p) && p % STEP !== 0;
+  $('pre').classList.toggle('bad', bad); $('pre').setAttribute('aria-invalid', String(bad));
+  $('preErr').textContent = bad ? `Nur 10-cm-Schritte – wird auf ${pre()} cm aufgerundet.` : '';
+}
+$('pre').addEventListener('input', () => { checkPre(); renderList(); renderQr(); });
+$('pre').addEventListener('change', () => { if ($('pre').value.trim() !== '') $('pre').value = pre(); checkPre(); renderList(); renderQr(); });
+// Abbruch und Endteufe schließen sich aus
+for (const [id, other] of [['abbruch', 'endteufe'], ['endteufe', 'abbruch']]) {
+  $(id).addEventListener('change', () => { if ($(id).checked) $(other).checked = false; renderQr(); });
+}
 $('name').addEventListener('input', renderQr);
 const next = () => add(values.length ? values[values.length - 1] : null);
 $('add').addEventListener('click', next);
@@ -282,12 +302,12 @@ function buildExport() {
   return JSON.stringify({ 'indirekt-drillings': dphs.map(d => {
     const first = (d.pre ?? PRE_DEFAULT) + STEP;
     return {
-      id: d.guid, type: 'dph', name: d.name.trim() || 'DPH',
+      id: '', type: 'dph', name: d.name.trim() || 'DPH',
       bearbeiter_sondierung: '', datum: d.date, date: d.date, DatumSondierung: d.date, BearbeiterSondierung: '',
       xKoordinate: '', yKoordinate: '', lageNhn: '', groundwaterLevels: [], coordinateSystemEpsgCode: '', connectedBoreholeId: '',
-      measurements: d.values.map((v, i) => ({ depthCm: first + i * STEP, n10: v == null ? null : v })),
+      measurements: d.values.map((v, i) => ({ depthCm: first + i * STEP, n10: n10(v) })),
       status: 'feld_fertig', preExcavationDepthCm: d.pre ?? PRE_DEFAULT,
-      abbruchGeraeteauslastung: false, endteufeErreicht: false, bemerkungen: ''
+      abbruchGeraeteauslastung: !!d.abbruch, endteufeErreicht: !!d.endteufe, bemerkungen: ''
     };
   }) }, null, 2);
 }
@@ -335,22 +355,27 @@ function confirmBtn(id, label, ask, action) {
 function resetConfirm() { for (const id of ['remove']) { delete $(id).dataset.sure; if ($(id).dataset.label) $(id).textContent = $(id).dataset.label; } }
 confirmBtn('remove', 'DPH löschen', 'Wirklich löschen?', () => {
   const i = dphs.findIndex(d => d.id === cur); dphs.splice(i, 1);
-  if (!dphs.length) dphs.push({ id: uid(), guid: guid(), date: today(), name: 'DPH 1', pre: PRE_DEFAULT, values: [null] });
+  if (!dphs.length) dphs.push({ id: uid(), date: today(), name: 'DPH 1', pre: PRE_DEFAULT, values: [null] });
   select(dphs[Math.max(0, i - 1)].id);
 });
 $('tabs').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.id === 'newDph') newDph(); else if (b.dataset.id) select(b.dataset.id);
 });
-const openFull = () => { renderQr(); $('full').classList.add('on'); $('close').focus(); };
+// Vollbild: wo möglich echten Vollbildmodus nutzen (Android/Desktop; iPhone-Safari kann das nicht)
+const openFull = () => {
+  $('full').classList.add('on'); renderQr(); $('close').focus();
+  if ($('full').requestFullscreen) $('full').requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+};
+const closeFull = () => {
+  $('full').classList.remove('on');
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+};
 $('show').addEventListener('click', openFull);
-$('close').addEventListener('click', () => $('full').classList.remove('on'));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') $('full').classList.remove('on'); });
-$('copy').addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText(encode()); $('copy').textContent = 'Kopiert ✓'; }
-  catch (e) { $('copy').textContent = 'Kopieren nicht möglich'; }
-  setTimeout(() => { $('copy').textContent = 'Code kopieren'; }, 1800);
-});
+$('close').addEventListener('click', closeFull);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFull(); });
+// Vollbild per Zurück-Geste/Esc verlassen → Ansicht ebenfalls schließen
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) $('full').classList.remove('on'); });
 
 select(cur);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

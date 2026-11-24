@@ -2,7 +2,7 @@
 // Seite selbst: erst Netz (damit Updates sofort ankommen), sonst Cache.
 // qr.js, Icons: erst Cache, sonst Netz. Alles kommt vom eigenen Server.
 // Bei Änderungen an der Liste unten oder an gecachten Dateien CACHE hochzählen.
-const CACHE = 'dph-v2';
+const CACHE = 'dph-v3';
 const CORE = [
   './',
   './index.html',

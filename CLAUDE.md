@@ -29,13 +29,18 @@ Die Daten gehen per QR-Code oder JSON-Export an eine Flutter-Windows-App.
 
 ```json
 { "cur": "<id>", "list": [
-  { "id": "<intern>", "guid": "{GUID-GROSS}", "date": "YYYY-MM-DD",
-    "name": "DPH 1", "pre": 120, "values": [5, 5, 6, null] }
+  { "id": "<intern>", "date": "YYYY-MM-DD", "name": "DPH 1", "pre": 120,
+    "values": [5, 5, 6, null], "abbruch": false, "endteufe": false }
 ]}
 ```
 
-- `pre` = Vorschachttiefe in cm (Standard 120). Erster Messwert liegt bei `pre + 10`.
-- `values[i]` = n10 bei Tiefe `pre + 10 * (i + 1)`; `null` = kein Wert.
+- `id` ist nur intern (Tabs/Auswahl). Eine GUID erzeugt die Web-App nicht mehr (alte `guid`-Felder werden beim Laden entfernt).
+- `pre` = Vorschachttiefe in cm (Standard 120), **immer ein Vielfaches von 10**. Erster Messwert liegt bei `pre + 10`.
+  Eingabe wie 125 wird rot markiert und beim Verlassen des Felds aufgerundet (130), siehe `up10()`.
+- `values[i]` = n10 bei Tiefe `pre + 10 * (i + 1)`; `null` = kein Wert; **0–120** (`N10_MAX`).
+  Höhere Eingaben werden markiert und als 120 übernommen.
+- `abbruch` / `endteufe` = Checkboxen „Abbruch wegen Geräteauslastung“ / „Endteufe erreicht“; schließen sich gegenseitig aus.
+  Im JSON-Export und im QR-Code (Ziffer `F`, siehe unten).
 - In der Liste zeigt die letzte Zeile den Bereich, z. B. `1,40–1,50 m`.
 
 ## QR-Format (nur Ziffern → QR-Numeric-Modus, Fehlerkorrektur M)
@@ -44,31 +49,16 @@ Vollständige Beschreibung mit Prüfregeln und Testvektoren für den Importer: `
 Bei Änderungen am Format dort und in `encode()` (`index.html`) gleichzeitig anpassen.
 
 ```
-1 TTTT WWW WWW WWW …
-│ │    └ je n10-Wert 3 Ziffern, 999 = kein Wert (null), max. 998
-│ └ Tiefe des ersten Messwerts in cm, 4 Ziffern (= pre + 10)
-└ Formatversion
+2 F TTTT WWW WWW WWW …
+│ │ │    └ je n10-Wert 3 Ziffern, 000–120, 999 = kein Wert (null)
+│ │ └ Tiefe des ersten Messwerts in cm, 4 Ziffern (= pre + 10, Vielfaches von 10)
+│ └ Abschluss: 0 keine Angabe, 1 Abbruch wegen Geräteauslastung, 2 Endteufe erreicht
+└ Formatversion (aktuell 2; Version 1 = gleicher Aufbau ohne F, nur noch vom Importer gelesen)
 ```
 
-Max. 200 Werte (20 m) → 605 Ziffern → QR-Version 12.
-Gegenstück in der Windows-App (Dart):
-
-```dart
-List<Measurement> decodeMeasurements(String raw) {
-  if (!RegExp(r'^1\d{4}(\d{3})*$').hasMatch(raw)) {
-    throw const FormatException('Kein gültiger DPH-Messwert-Code');
-  }
-  final start = int.parse(raw.substring(1, 5));
-  final values = raw.substring(5);
-  return [
-    for (var i = 0; i < values.length ~/ 3; i++)
-      Measurement(
-        depthCm: start + i * 10,
-        n10: switch (int.parse(values.substring(i * 3, i * 3 + 3))) { 999 => null, final v => v },
-      ),
-  ];
-}
-```
+Max. 200 Werte (20 m) → 606 Ziffern → QR-Version 12.
+Inkompatible Änderungen am Aufbau immer mit neuer Formatversion.
+Gegenstück in der Windows-App (Dart): Referenz-Decoder in `QR-FORMAT.md`, Abschnitt 5.
 
 ## JSON-Export (Format der Windows-App)
 
@@ -76,7 +66,7 @@ Alle DPHs in einer Datei `DPH-Export_YYYY-MM-DD.json`:
 
 ```json
 { "indirekt-drillings": [ {
-  "id": "{GUID}", "type": "dph", "name": "DPH 1",
+  "id": "", "type": "dph", "name": "DPH 1",
   "bearbeiter_sondierung": "", "datum": "2026-11-16", "date": "2026-11-16",
   "DatumSondierung": "2026-11-16", "BearbeiterSondierung": "",
   "xKoordinate": "", "yKoordinate": "", "lageNhn": "",
@@ -87,7 +77,8 @@ Alle DPHs in einer Datei `DPH-Export_YYYY-MM-DD.json`:
 } ] }
 ```
 
-Die `id` (GUID) bleibt pro DPH stabil, damit die Windows-App beim erneuten Import aktualisieren statt duplizieren kann.
+`id` bleibt leer – die Web-App erzeugt keine ID, das übernimmt die Windows-App.
+`abbruchGeraeteauslastung` / `endteufeErreicht` kommen aus den Checkboxen, `n10` ist auf 120 begrenzt.
 Export am Handy über `navigator.share` (Teilen-Menü), sonst normaler Download.
 
 ## Testen

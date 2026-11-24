@@ -8,7 +8,7 @@ Die Messwerte werden als QR-Code an die Windows-App übertragen oder als JSON ex
 1. Seite am Handy öffnen.
 2. DPH wählen oder mit „+ Neue DPH“ anlegen, Vorschachttiefe eintragen (Standard 120 cm).
 3. Schlagzahlen eingeben. „+ Zeile“ legt die nächste Zeile mit dem letzten Wert an.
-4. „QR groß anzeigen“ und in der Windows-App in der passenden DPH scannen,
+4. „QR-Code anzeigen“ und in der Windows-App in der passenden DPH scannen,
    oder „JSON exportieren“ für alle DPHs auf einmal.
 
 **Tipp:** Im Browser „Teilen → Zum Home-Bildschirm“ wählen. Dann startet die Seite wie eine App im Vollbild,
