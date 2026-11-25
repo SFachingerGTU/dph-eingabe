@@ -86,6 +86,11 @@ button.b.show{display:block;width:100%;min-height:56px;margin-top:22px;font-size
 .fullhead button{flex:none;width:44px;height:44px;border:0;border-radius:8px;background:none;color:#111;font-size:30px;line-height:1;cursor:pointer}
 .qrwrap{flex:1;min-height:0;display:grid;place-items:center;padding:6px;container-type:size}
 .full .qrbox{width:min(calc(100vw - 12px),calc(100dvh - 60px));width:min(100cqw,100cqh)}
+/* Hinweis auf neue Version: dezent unten, unter der Vollbild-QR-Ansicht */
+.upd{position:fixed;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:12px;
+  max-width:calc(100vw - 24px);padding:6px 6px 6px 16px;border-radius:10px;background:var(--ink);color:var(--bg);font-size:15px;box-shadow:0 2px 12px rgb(0 0 0/.25)}
+.upd[hidden]{display:none}
+.upd button{flex:none;min-height:44px;padding:0 14px;border:0;border-radius:8px;background:var(--accent);color:#111;font:inherit;font-weight:700;cursor:pointer}
 @media(prefers-reduced-motion:no-preference){.row.new{animation:in .25s ease-out}@keyframes in{from{background:var(--accent)}}}
 </style>
 </head>
@@ -100,6 +105,20 @@ button.b.show{display:block;width:100%;min-height:56px;margin-top:22px;font-size
     <p>DPH wählen oder neu anlegen, Schlagzahlen je 10 cm eingeben, dann den QR-Code in der Windows-App in der passenden DPH scannen.</p>
     <p>„+ Zeile“ unter der letzten Zeile oder Enter bzw. „Weiter“ auf der Tastatur legt eine neue Zeile an, vorausgefüllt mit dem letzten Wert. Gleicher Wert: einfach nochmal drücken. Anderer Wert: direkt lostippen, der Vorschlag wird überschrieben. Ein leeres Feld wird als „kein Wert“ (999) übertragen. Alle DPHs bleiben auf diesem Handy gespeichert.</p>
     <p>Zum Scannen „QR-Code anzeigen“, Displayhelligkeit hoch, Tablet-Kamera ca. 20–30 cm entfernt halten.</p>
+    <p>Die App funktioniert offline. Messwerte bleiben auf diesem Gerät, bis sie per QR-Code übertragen oder exportiert werden – bitte zeitnah übertragen.</p>
+    <p class="note" id="storage"></p>
+    <h2>Installieren</h2>
+    <h3>iPhone</h3>
+    <ol>
+      <li>Die Seite in Safari öffnen. Seit iOS 16.4 geht es auch aus Chrome oder Edge.</li>
+      <li>Auf Teilen tippen (Quadrat mit Pfeil) und dann „Zum Home-Bildschirm“ wählen.</li>
+      <li>„Öffnen als Web-App“ eingeschaltet lassen, falls die Option angezeigt wird, und auf Hinzufügen tippen.</li>
+    </ol>
+    <h3>Android</h3>
+    <ol>
+      <li>Die Seite in Chrome öffnen.</li>
+      <li>Chrome zeigt meist selbst „App installieren“ an. Sonst übers Menü ⋮ und dann „App installieren“ oder „Zum Startbildschirm hinzufügen“.</li>
+    </ol>
   </div>
 
   <div class="tabs" id="tabs" role="tablist" aria-label="DPHs"></div>
@@ -141,6 +160,7 @@ button.b.show{display:block;width:100%;min-height:56px;margin-top:22px;font-size
   <div class="tools"><button class="b primary" id="dlgCopy" type="button">Kopieren</button><button class="b" id="dlgClose" type="button">Schließen</button></div>
 </div>
 <div class="msg" id="msg" role="status"></div>
+<div class="upd" id="upd" role="status" hidden><span>Neue Version verfügbar</span><button id="updBtn" type="button">Neu laden</button></div>
 
 
 <script src="qr.js"></script>
@@ -150,23 +170,108 @@ const $ = id => document.getElementById(id);
 const STEP = 10, MAX = 200, KEY = 'dph-qr-v2', N10_MAX = 120;
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-let dphs = [], cur = '';
+let dphs = [], cur = '', values = [], ready = false;
 
-try {
-  const d = JSON.parse(localStorage.getItem(KEY) || 'null');
-  if (d && Array.isArray(d.list) && d.list.length) { dphs = d.list; cur = d.cur; }
-  else {
+// --- Speicher -------------------------------------------------------------------------
+// IndexedDB: Datenbank „dph“, Store „state“, ein Datensatz „main“ = { list, cur, saved }.
+// Ist IndexedDB nicht nutzbar, dient localStorage (KEY) als Notlösung.
+const DB_NAME = 'dph', DB_STORE = 'state', DB_KEY = 'main';
+let db = null; // offene IndexedDB-Verbindung; null → localStorage
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) return reject(new Error('IndexedDB nicht verfügbar'));
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(DB_STORE);
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+}
+// Eine Transaktion; erfüllt erst, wenn sie abgeschlossen (also wirklich geschrieben) ist
+function idbTx(mode, fn) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, mode), req = fn(tx.objectStore(DB_STORE));
+    tx.oncomplete = () => resolve(req.result);
+    tx.onerror = tx.onabort = () => reject(tx.error || new Error('IndexedDB-Fehler'));
+  });
+}
+const idbGet = () => idbTx('readonly', s => s.get(DB_KEY));
+const idbPut = data => idbTx('readwrite', s => s.put(data, DB_KEY));
+
+function readLocal() {
+  try {
+    const d = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (d && Array.isArray(d.list) && d.list.length) return d;
     const old = JSON.parse(localStorage.getItem('dph-qr-draft-v1') || 'null');
-    if (old && Array.isArray(old.v)) dphs = [{ id: uid(), name: old.n || 'DPH 1', pre: (old.s || 130) - 10, values: old.v }];
+    if (old && Array.isArray(old.v)) return { list: [{ id: uid(), name: old.n || 'DPH 1', pre: (old.s || 130) - 10, values: old.v }], cur: '' };
+  } catch (e) {}
+  return null;
+}
+function clearLocal() { try { localStorage.removeItem(KEY); localStorage.removeItem('dph-qr-draft-v1'); } catch (e) {} }
+
+// Laden inkl. Umzug localStorage → IndexedDB. Der alte Eintrag wird erst gelöscht,
+// wenn IndexedDB das Schreiben bestätigt hat.
+async function loadData() {
+  const local = readLocal();
+  try {
+    db = await idbOpen();
+    const stored = await idbGet();
+    const hasStored = !!(stored && Array.isArray(stored.list) && stored.list.length);
+    // localStorage gewinnt nur, wenn IndexedDB leer ist oder dort Neueres liegt (Notlösung war aktiv)
+    if (local && (!hasStored || (local.saved || 0) > (stored.saved || 0))) {
+      await idbPut({ list: local.list, cur: local.cur, saved: local.saved || Date.now() });
+      clearLocal();
+      return local;
+    }
+    if (local) clearLocal(); // älter als IndexedDB → schon übernommen
+    return hasStored ? stored : null;
+  } catch (e) {
+    db = null;
+    return local;
   }
-} catch (e) {}
-if (!dphs.length) dphs = [{ id: uid(), name: 'DPH 1', pre: 120, values: [null] }];
-if (!dphs.some(d => d.id === cur)) cur = dphs[0].id;
+}
+
+// Speichern: nach jeder Änderung, 300 ms gebündelt; Schreibvorgänge laufen nacheinander
+let saveTimer = 0, writing = Promise.resolve();
+function scheduleWrite() { clearTimeout(saveTimer); saveTimer = setTimeout(writeNow, 300); }
+function writeNow() {
+  clearTimeout(saveTimer); saveTimer = 0;
+  writing = writing.then(async () => {
+    const data = { list: dphs, cur, saved: Date.now() };
+    if (db) { try { await idbPut(data); return; } catch (e) { /* weiter mit localStorage */ } }
+    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {}
+  });
+  return writing;
+}
+// App geht in den Hintergrund / wird geschlossen → Ausstehendes sofort schreiben
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && saveTimer) writeNow(); });
+window.addEventListener('pagehide', () => { if (saveTimer) writeNow(); });
+
+// Dauerhaften Speicher anfragen und Status unter „i“ anzeigen
+const fmtBytes = b => b < 1e6 ? `${(b / 1e3).toLocaleString('de-DE', { maximumFractionDigits: 0 })} KB`
+  : b < 1e9 ? `${(b / 1e6).toLocaleString('de-DE', { maximumFractionDigits: 1 })} MB`
+  : `${(b / 1e9).toLocaleString('de-DE', { maximumFractionDigits: 1 })} GB`;
+async function requestPersist() {
+  try { if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); } catch (e) {}
+  showStorage();
+}
+async function showStorage() {
+  const st = navigator.storage, parts = [];
+  parts.push(db ? 'Gespeichert in der Gerätedatenbank (IndexedDB).' : 'Gespeichert im localStorage (Notlösung, IndexedDB nicht verfügbar).');
+  try {
+    if (st && st.persisted) parts.push(await st.persisted()
+      ? 'Speicher ist dauerhaft – der Browser löscht die Daten nicht von selbst.'
+      : 'Speicher ist nicht dauerhaft – der Browser darf die Daten bei Platzmangel löschen. Als App installieren hilft.');
+    else parts.push('Ob der Speicher dauerhaft ist, zeigt dieser Browser nicht an.');
+  } catch (e) {}
+  try {
+    if (st && st.estimate) { const { usage, quota } = await st.estimate(); parts.push(`Belegt: ${fmtBytes(usage || 0)}${quota ? ` von ${fmtBytes(quota)}` : ''}.`); }
+  } catch (e) {}
+  $('storage').textContent = parts.join(' ');
+}
 
 const D = () => dphs.find(d => d.id === cur);
-let values = D().values;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-for (const d of dphs) { if (d.pre == null) d.pre = (d.start || 130) - 10; d.pre = up10(d.pre); delete d.guid; if (!d.date) d.date = today(); }
 const PRE_DEFAULT = 120;
 // Tiefen nur in 10-cm-Schritten: Vorschacht wird auf volle 10 cm aufgerundet
 function up10(cm) { return Math.min(9980, Math.ceil(cm / STEP) * STEP); }
@@ -176,10 +281,10 @@ const start = () => pre() + STEP;
 const m = cm => (cm / 100).toFixed(2).replace('.', ',') + '\u00a0m';
 
 function save() {
+  if (!ready) return;
   const d = D(); d.values = values; d.pre = pre(); delete d.start; d.name = $('name').value;
   d.abbruch = $('abbruch').checked; d.endteufe = $('endteufe').checked;
-  try { localStorage.setItem(KEY, JSON.stringify({ list: dphs, cur })); } catch (e) {}
-  renderTabs();
+  renderTabs(); scheduleWrite();
 }
 
 function renderTabs() {
@@ -334,7 +439,10 @@ $('dlgCopy').addEventListener('click', async () => {
   catch (e) { $('dlgText').select(); $('dlgCopy').textContent = 'Markiert – jetzt kopieren'; }
   setTimeout(() => { $('dlgCopy').textContent = 'Kopieren'; }, 2000);
 });
-$('infoBtn').addEventListener('click', () => { const open = $('info').hidden; $('info').hidden = !open; $('infoBtn').setAttribute('aria-expanded', String(open)); });
+$('infoBtn').addEventListener('click', () => {
+  const open = $('info').hidden; $('info').hidden = !open; $('infoBtn').setAttribute('aria-expanded', String(open));
+  if (open) showStorage();
+});
 // „+ Zeile“ nimmt dem Eingabefeld nicht den Fokus, damit die Tastatur offen bleibt
 $('add').addEventListener('pointerdown', e => { if (document.activeElement && document.activeElement.closest('#list')) e.preventDefault(); });
 function confirmBtn(id, label, ask, action) {
@@ -369,8 +477,42 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFull();
 // Vollbild per Zurück-Geste/Esc verlassen → Ansicht ebenfalls schließen
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) $('full').classList.remove('on'); });
 
-select(cur);
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+// --- Start --------------------------------------------------------------------------
+async function init() {
+  const data = await loadData();
+  if (data && Array.isArray(data.list)) { dphs = data.list; cur = data.cur; }
+  if (!dphs.length) dphs = [{ id: uid(), date: today(), name: 'DPH 1', pre: PRE_DEFAULT, values: [null] }];
+  if (!dphs.some(d => d.id === cur)) cur = dphs[0].id;
+  for (const d of dphs) { if (d.pre == null) d.pre = (d.start || 130) - 10; d.pre = up10(d.pre); delete d.guid; if (!d.date) d.date = today(); if (!Array.isArray(d.values)) d.values = [null]; }
+  ready = true;
+  select(cur);
+  requestPersist();
+}
+init();
+
+// --- Updates: neue Version wartet, bis „Neu laden“ getippt wird ------------------------
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  let waiting = null, reloadOnChange = false;
+  const offer = w => { if (!w || !navigator.serviceWorker.controller) return; waiting = w; $('upd').hidden = false; };
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    offer(reg.waiting);
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing; if (!w) return;
+      w.addEventListener('statechange', () => { if (w.state === 'installed') offer(w); });
+    });
+    // Beim Zurückkehren in die App nach einer neuen Version sehen (offline scheitert das still)
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+  }).catch(() => {});
+  // Neu laden erst, wenn die neue Version wirklich übernommen hat
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloadOnChange) location.reload(); });
+  $('updBtn').addEventListener('click', async () => {
+    if (!waiting) return;
+    $('updBtn').disabled = true;
+    await writeNow();                 // Eingaben sichern, bevor neu geladen wird
+    reloadOnChange = true;
+    waiting.postMessage({ type: 'SKIP_WAITING' });
+  });
+}
 }
 </script>
 </body>

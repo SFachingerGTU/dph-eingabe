@@ -14,6 +14,10 @@ Die Messwerte werden als QR-Code an die Windows-App übertragen oder als JSON ex
 **Tipp:** Im Browser „Teilen → Zum Home-Bildschirm“ wählen. Dann startet die Seite wie eine App im Vollbild,
 funktioniert offline, und iOS löscht die gespeicherten DPHs nicht automatisch.
 
+Nach dem ersten Öffnen mit Internet funktioniert die App komplett offline, auch nach einem Neustart
+des Geräts im Flugmodus. Gibt es eine neue Version, erscheint unten „Neue Version verfügbar – Neu laden“;
+bis dahin läuft die bisherige weiter, Eingaben gehen beim Neuladen nicht verloren.
+
 Die Seite lädt nichts von fremden Servern: Der QR-Code wird vom eigenen `qr.js` erzeugt,
 als Schrift dient die Systemschrift des Geräts. Alle Daten bleiben auf dem Handy.
 

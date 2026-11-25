@@ -11,7 +11,12 @@ Die Daten gehen per QR-Code oder JSON-Export an eine Flutter-Windows-App.
   Fehlerkorrektur M, Versionen 1–15 (max. 991 Ziffern), alle 8 Masken mit Penalty N1–N4.
   API: `QR.encodeNumeric(digits)` → `{ size, version, mask, isDark(row, col) }`; wirft bei
   Nicht-Ziffern oder zu langer Eingabe. `{ mask: 0..7 }` als 2. Argument erzwingt eine Maske (nur für Tests).
-- `sw.js` – Service Worker für Offline-Betrieb. Bei Änderungen an gecachten Dateien (`CORE`) `CACHE` hochzählen (aktuell `dph-v2`).
+- `sw.js` – Service Worker, **offline-first**: Alle App-Dateien stehen in `CORE` (Installation schlägt fehl,
+  wenn eine fehlt). Jede Anfrage kommt sofort aus dem Cache (`ignoreSearch`), parallel wird im Hintergrund
+  aus dem Netz aufgefrischt (stale-while-revalidate). Kein automatisches `skipWaiting`: Eine neue Version
+  wartet, `index.html` zeigt „Neue Version verfügbar – Neu laden“, erst der Klick schickt `SKIP_WAITING`
+  (vorher werden ausstehende Eingaben gespeichert). Neue Datei → in `CORE` eintragen. Für jede Auslieferung,
+  die Nutzer bekommen sollen, `CACHE` hochzählen (aktuell `dph-v4`) – nur das löst den Hinweis aus.
 - `manifest.webmanifest`, `icon*.png`, `icon.svg`, `apple-touch-icon.png` – „Zum Home-Bildschirm“ / PWA.
 - `.nojekyll` – verhindert, dass GitHub Pages die Seite durch Jekyll schickt.
 - `test/` – nur Entwicklung (Node-Testskript + `package.json`), wird von der App nicht geladen.
@@ -23,12 +28,24 @@ Die Daten gehen per QR-Code oder JSON-Export an eine Flutter-Windows-App.
 - Oberfläche auf Deutsch, Tiefen in Metern mit Komma (`1,30 m`), intern in cm.
 - Zielgerät ist das Handy (iPhone Safari/Firefox, Android Chrome). Bedienelemente mind. 44 px, Eingabefelder 16 px+ (sonst zoomt iOS).
 - Kein Framework, kein Build. Werte aus Eingaben nie als HTML einsetzen ohne `esc()`.
-- Daten liegen nur im `localStorage` des Geräts (Schlüssel `dph-qr-v2`), es gibt kein Backend.
+- Daten liegen nur auf dem Gerät (IndexedDB, Notlösung localStorage), es gibt kein Backend.
+- Muss nach einmaliger Installation im Flugmodus voll funktionieren: nichts von fremden Servern laden,
+  nie beim Start auf das Netz warten.
 
-## Datenmodell (localStorage `dph-qr-v2`)
+## Speicher
+
+- IndexedDB ohne Bibliothek: Datenbank `dph`, Store `state`, ein Datensatz `main` (Inhalt siehe unten).
+- Beim ersten Start werden Daten aus localStorage (`dph-qr-v2`, ganz alt `dph-qr-draft-v1`) übernommen;
+  der alte Eintrag wird erst gelöscht, wenn die IndexedDB-Transaktion abgeschlossen ist.
+- Speichern nach jeder Änderung, 300 ms gebündelt (`scheduleWrite`), sofort bei `visibilitychange: hidden`,
+  `pagehide` und vor „Neu laden“ (`writeNow`). Schlägt IndexedDB fehl → localStorage. Beim Laden gewinnt
+  der neuere Stand (Feld `saved`).
+- Beim Start `navigator.storage.persist()`; Status und Belegung (`estimate()`) stehen unter „i“.
+
+## Datenmodell (IndexedDB `dph/state/main`, Notlösung localStorage `dph-qr-v2`)
 
 ```json
-{ "cur": "<id>", "list": [
+{ "cur": "<id>", "saved": 1764000000000, "list": [
   { "id": "<intern>", "date": "YYYY-MM-DD", "name": "DPH 1", "pre": 120,
     "values": [5, 5, 6, null], "abbruch": false, "endteufe": false }
 ]}
@@ -90,7 +107,10 @@ Export am Handy über `navigator.share` (Teilen-Menü), sonst normaler Download.
   Optional `CASES=1000 SEED=42`. Nach jeder Änderung an `qr.js` ausführen.
   Die automatische Maskenwahl weicht von `qrcode-generator` ab – erwartet, die Bibliothek bewertet vereinfacht.
 - Lokal: `npx serve .` oder `python -m http.server` im Projektordner, dann `http://localhost:8000`.
-  Am Handy im selben WLAN über die IP des PCs testen (Service Worker läuft dann nicht, da kein HTTPS – das ist ok).
+  Auf `localhost` läuft der Service Worker (offline-first!): Änderungen erscheinen erst nach Strg+F5
+  bzw. mit DevTools → Application → „Update on reload“. Über die IP des PCs (Handy im WLAN) läuft er nicht.
+- Offline-Verhalten prüfen (DevTools → Application/Network → Offline, oder Server stoppen): App muss
+  nach Neustart des Browsers starten, Daten zeigen, QR erzeugen und speichern.
 - Nach dem Push auf GitHub Pages ca. 1 Minute warten; das Handy lädt die neue Version beim nächsten Öffnen mit Netz.
 
 ## Sicherheit
