@@ -37,8 +37,9 @@ Die Daten gehen per QR-Code oder JSON-Export an eine Flutter-Windows-App.
 - IndexedDB ohne Bibliothek: Datenbank `dph`, Store `state`, ein Datensatz `main` (Inhalt siehe unten).
 - Beim ersten Start werden Daten aus localStorage (`dph-qr-v2`, ganz alt `dph-qr-draft-v1`) übernommen;
   der alte Eintrag wird erst gelöscht, wenn die IndexedDB-Transaktion abgeschlossen ist.
-- Speichern nach jeder Änderung, 300 ms gebündelt (`scheduleWrite`), sofort bei `visibilitychange: hidden`,
-  `pagehide` und vor „Neu laden“ (`writeNow`). Schlägt IndexedDB fehl → localStorage. Beim Laden gewinnt
+- Speichern sofort nach jeder Änderung (`writeNow`), ohne feste Wartezeit. Es läuft höchstens ein
+  Schreibvorgang; Änderungen währenddessen werden direkt danach in einem Rutsch geschrieben (immer der
+  komplette Stand). Zusätzlich bei `visibilitychange: hidden`, `pagehide` und vor „Neu laden“. Schlägt IndexedDB fehl → localStorage. Beim Laden gewinnt
   der neuere Stand (Feld `saved`).
 - Beim Start `navigator.storage.persist()`; Status und Belegung (`estimate()`) stehen unter „i“.
 

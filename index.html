@@ -231,21 +231,29 @@ async function loadData() {
   }
 }
 
-// Speichern: nach jeder Änderung, 300 ms gebündelt; Schreibvorgänge laufen nacheinander
-let saveTimer = 0, writing = Promise.resolve();
-function scheduleWrite() { clearTimeout(saveTimer); saveTimer = setTimeout(writeNow, 300); }
-function writeNow() {
-  clearTimeout(saveTimer); saveTimer = 0;
-  writing = writing.then(async () => {
-    const data = { list: dphs, cur, saved: Date.now() };
-    if (db) { try { await idbPut(data); return; } catch (e) { /* weiter mit localStorage */ } }
-    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {}
-  });
-  return writing;
+// Speichern: sofort nach jeder Änderung, ohne feste Wartezeit. Es läuft immer höchstens ein
+// Schreibvorgang; was währenddessen geändert wird, wird direkt danach in einem Rutsch geschrieben.
+// Geschrieben wird stets der komplette aktuelle Stand – nichts kann vertauscht werden oder fehlen.
+let dirty = false, busy = null;
+async function writeOnce() {
+  const data = { list: dphs, cur, saved: Date.now() };
+  if (db) { try { await idbPut(data); return; } catch (e) { /* weiter mit localStorage */ } }
+  try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {}
 }
-// App geht in den Hintergrund / wird geschlossen → Ausstehendes sofort schreiben
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && saveTimer) writeNow(); });
-window.addEventListener('pagehide', () => { if (saveTimer) writeNow(); });
+async function flush() {
+  while (dirty) { dirty = false; await writeOnce(); }
+  busy = null;
+}
+// Gibt ein Promise zurück, das erfüllt ist, wenn der aktuelle Stand gespeichert ist
+function writeNow() {
+  dirty = true;
+  // Microtask: mehrere Änderungen im selben Ablauf (z. B. Eingabe + Tabs) ergeben einen Schreibvorgang
+  return busy || (busy = Promise.resolve().then(flush));
+}
+const scheduleWrite = writeNow;
+// App geht in den Hintergrund / wird geschlossen → zur Sicherheit noch einmal schreiben
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') writeNow(); });
+window.addEventListener('pagehide', () => writeNow());
 
 // Dauerhaften Speicher anfragen und Status unter „i“ anzeigen
 const fmtBytes = b => b < 1e6 ? `${(b / 1e3).toLocaleString('de-DE', { maximumFractionDigits: 0 })} KB`
